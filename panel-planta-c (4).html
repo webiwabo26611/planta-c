@@ -1,0 +1,171 @@
+<!doctype html>
+<html lang="es"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Planta C · Panel de control</title>
+<style>
+:root{--bg:#e9efe3;--card:#fbfdf8;--ink:#14231a;--mut:#58685d;--line:#cfd9c7;--pw:#1c6b45;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0e1711;--card:#16231b;--ink:#e4efe6;--mut:#8ea496;--line:#25372c;--pw:#4fcf8a}}
+:root[data-theme="dark"]{--bg:#0e1711;--card:#16231b;--ink:#e4efe6;--mut:#8ea496;--line:#25372c;--pw:#4fcf8a}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:inherit}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+main{max-width:560px;margin:0 auto;padding:0 14px 40px}
+header{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bg);display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 0;border-bottom:1px solid var(--line)}
+h1{font:700 26px/1 Georgia,"Times New Roman",serif;margin:0;letter-spacing:-.5px}
+h2{font:700 18px/1.1 Georgia,serif;margin:0}
+small{color:var(--mut)}
+button,select{font:inherit;color:inherit}
+#cn{border:1.5px solid var(--ink);background:none;border-radius:99px;padding:8px 14px;font-weight:600}
+#cn.ok{background:var(--pw);border-color:var(--pw);color:#fff}
+#msg{margin:10px 0 0;min-height:20px;color:var(--mut);font-size:13px}
+.aviso{margin:10px 0;padding:10px 12px;border:1px solid var(--line);border-radius:8px;background:var(--card);font-size:13px;display:none}
+#pw{width:100%;margin:12px 0;padding:18px;border-radius:14px;border:2px solid var(--pw);background:none;color:var(--pw);font:700 20px Georgia,serif}
+#pw.on{background:var(--pw);color:var(--bg)}
+#zonas{display:grid;gap:12px;transition:opacity .2s}
+#zonas.off{opacity:.5}
+.card{background:var(--card);border:1px solid var(--line);border-left:5px solid var(--z);border-radius:10px;padding:14px;--z:#888}
+.card+.card{margin-top:0}
+.hd{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:8px}
+.f{display:block;margin-top:12px;font-size:13px;color:var(--mut)}
+.f b{float:right;color:var(--ink)}
+select{width:100%;margin-top:4px;padding:10px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink)}
+input[type=range]{width:100%;margin:8px 0 0;accent-color:var(--z);height:28px}
+.sw{position:relative;width:48px;height:28px;flex:none;display:inline-block}
+.sw input{position:absolute;inset:0;opacity:0;margin:0;z-index:1}
+.sw i{position:absolute;inset:0;border-radius:99px;background:var(--line);transition:.2s}
+.sw i:before{content:"";position:absolute;left:3px;top:3px;width:22px;height:22px;border-radius:50%;background:#fff;transition:.2s}
+.sw input:checked+i{background:var(--z)}
+.sw input:checked+i:before{transform:translateX(20px)}
+.chips{display:flex;gap:6px;flex-wrap:wrap}
+.chips button,.btn{border:1px solid var(--line);background:var(--bg);border-radius:99px;padding:7px 12px}
+.chips button.on{background:var(--z);border-color:var(--z);color:#fff}
+.sw9{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:6px}
+.sw9 button{width:34px;height:34px;border-radius:50%;border:2px solid var(--line);padding:0}
+.rueda{display:block;width:100%;max-width:240px;margin:12px auto 0;touch-action:none;cursor:crosshair;border-radius:50%}
+.fila{display:flex;gap:8px;margin-top:12px}
+.btn{flex:1;padding:12px;border-radius:10px;font-weight:600}
+.btn.p{background:var(--pw);border-color:var(--pw);color:var(--bg)}
+button:focus-visible,select:focus-visible,input:focus-visible{outline:3px solid var(--pw);outline-offset:2px}
+</style></head><body><main>
+<header><h1>Planta C</h1><button id="cn">Conectar</button></header>
+<div class="aviso" id="av"></div>
+<button id="pw">Encender</button>
+<div id="zonas">
+<section class="card" style="--z:#d9803e" id="seq">
+<div class="hd"><div><h2>Secuencia de la cabeza</h2><small>Dura lo que tarda en abrirse la boca; después los pétalos rojos se activan</small></div></div>
+<label class="f">Duración <b id="durv"></b><input type="range" id="dur" min="5" max="120" value="20"></label>
+<div class="fila"><button class="btn p" id="sIni">Iniciar</button><button class="btn" id="sRes">Reiniciar</button></div>
+</section>
+</div>
+<p id="msg"></p>
+</main>
+<script>
+const SVC='6e400001-b5a3-f393-e0a9-e50e24dcca9e',RXU='6e400002-b5a3-f393-e0a9-e50e24dcca9e',TXU='6e400003-b5a3-f393-e0a9-e50e24dcca9e';
+const FXP=['Apagado','Fijo','Respiración','Parpadeo','Latido','Rampa sube','Rampa baja','Strobe','Vela','Ola entre grupos','Persecución','Relámpago'];
+const FXT=['Apagado','Fijo','Respiración','Parpadeo','Punto que recorre','Barrido','Cometa','Ola','Destellos','Arcoíris','Llenado (sigue la secuencia)'];
+const COLS=['#ff0000','#ff6a00','#ffd000','#00ff40','#006400','#00e5ff','#0040ff','#a000ff','#ff00a0','#ffffff'];
+const base={en:1,sp:31};
+const S={H:{...base,fx:10,br:50,col:'#ff0000'},E:{...base,fx:0,br:50,col:'#00ff00'},G:{...base,fx:9,br:100},R:{...base,fx:2,sp:23,br:100}};
+['G1','G2','G3','G4','G5'].forEach(g=>S[g]={...S.G});
+let sel='G',dur=20,ch=null,on=false,q=Promise.resolve();
+const ZON=[
+ {id:'H',t:'Cabeza',sub:'101 chips',fx:FXT,col:1,z:'#d9803e'},
+ {id:'E',t:'Enredaderas',sub:'8 tiras, efecto sobre 10 chips',fx:FXT,col:1,z:'#8fb339'},
+ {id:'G',t:'Pétalos verdes',sub:'5 grupos de 2 pétalos',fx:FXP,chips:1,z:'#2fa36b'},
+ {id:'R',t:'Pétalos rojos',sub:'5 pétalos, un solo canal',fx:FXP,z:'#d23a52'}];
+const $=s=>document.querySelector(s),enc=new TextEncoder();
+const per=v=>Math.round(10000*Math.pow(.02,v/100)/100)*100;
+const log=t=>$('#msg').textContent=t;
+
+function send(c){if(!ch)return;q=q.then(async()=>{try{ch.writeValueWithoutResponse?await ch.writeValueWithoutResponse(enc.encode(c)):await ch.writeValue(enc.encode(c))}catch(e){log('No se pudo enviar: '+e.message)}})}
+const tm={},pd={};
+function sendK(k,c){pd[k]=c;if(!tm[k])tm[k]=setTimeout(()=>{tm[k]=0;send(pd[k])},70)}
+const rgb=h=>[1,3,5].map(i=>parseInt(h.substr(i,2),16)).join(',');
+
+function hsv(h,s,v){const f=n=>{const k=(n+h/60)%6;return Math.round(255*(v-v*s*Math.max(0,Math.min(k,4-k,1))))};return[f(5),f(3),f(1)]}
+function aHsv(hx){const[r,g,b]=[1,3,5].map(i=>parseInt(hx.substr(i,2),16)/255),m=Math.max(r,g,b),d=m-Math.min(r,g,b);let h=0;if(d){h=m==r?((g-b)/d+6)%6:m==g?(b-r)/d+2:(r-g)/d+4;h*=60}return[h,m?d/m:0,m]}
+const RUEDA=(()=>{const c=document.createElement('canvas');c.width=c.height=240;const x=c.getContext('2d'),im=x.createImageData(240,240);
+ for(let j=0;j<240;j++)for(let i=0;i<240;i++){const dx=i-119.5,dy=j-119.5,r=Math.hypot(dx,dy)/118,p=(j*240+i)*4;
+  if(r>1)continue;
+  const h=(Math.atan2(dy,dx)*180/Math.PI+360)%360,[R,G,B]=hsv(h,r,1);
+  im.data[p]=R;im.data[p+1]=G;im.data[p+2]=B;im.data[p+3]=255}
+ x.putImageData(im,0,0);return c})();
+function marca(cv,hs){const x=cv.getContext('2d');x.clearRect(0,0,240,240);x.drawImage(RUEDA,0,0);
+ const[h,s]=hs,a=h*Math.PI/180,px=119.5+Math.cos(a)*s*118,py=119.5+Math.sin(a)*s*118;
+ x.lineWidth=3;x.strokeStyle='#fff';x.beginPath();x.arc(px,py,9,0,7);x.stroke();
+ x.lineWidth=1;x.strokeStyle='#000';x.beginPath();x.arc(px,py,11,0,7);x.stroke()}
+function elegir(e){const cv=e.target.closest?.('.rueda');if(!cv||!e.buttons)return;
+ const b=cv.getBoundingClientRect(),k=240/b.width,dx=(e.clientX-b.left)*k-119.5,dy=(e.clientY-b.top)*k-119.5,
+  r=Math.min(Math.hypot(dx,dy)/118,1),h=(Math.atan2(dy,dx)*180/Math.PI+360)%360,sec=cv.closest('.card');
+ aplicar(sec,'hsv',[h,r,sec.querySelector('[data-k=val]').value/100])}
+document.addEventListener('pointerdown',e=>{const cv=e.target.closest?.('.rueda');if(cv){cv.setPointerCapture(e.pointerId);elegir(e)}});
+document.addEventListener('pointermove',elegir);
+
+function cmds(z){const s=S[z];send(`EN,${z},${s.en}`);send(`FX,${z},${s.fx}`);send(`BR,${z},${s.br}`);send(`SP,${z},${per(s.sp)}`);if(s.col)send(`COL,${z},${rgb(s.col)}`)}
+function sincronizar(){send('DUR,'+dur);['H','E','G','G1','G2','G3','G4','G5','R'].forEach(cmds)}
+
+function card(z){return `<section class="card" id="c${z.id}" data-z="${z.id}" style="--z:${z.z}">
+<div class="hd"><div><h2>${z.t}</h2><small>${z.sub}</small></div><label class="sw"><input type="checkbox" data-k="en"><i></i></label></div>
+${z.chips?`<div class="chips">${['G','G1','G2','G3','G4','G5'].map(g=>`<button data-g="${g}">${g=='G'?'Todos':'Grupo '+g[1]}</button>`).join('')}</div>`:''}
+<label class="f">Efecto<select data-k="fx">${z.fx.map((n,i)=>`<option value="${i}">${n}</option>`).join('')}</select></label>
+<label class="f">Brillo <b data-o="br"></b><input type="range" data-k="br" min="0" max="100"></label>
+<label class="f">Velocidad <b data-o="sp"></b><input type="range" data-k="sp" min="0" max="100"></label>
+${z.col?`<div class="f">Color, se cambia en vivo<div class="sw9">${COLS.map(c=>`<button style="background:${c}" data-c="${c}" aria-label="${c}"></button>`).join('')}</div><canvas class="rueda" width="240" height="240" aria-label="Rueda de color"></canvas><label class="f">Luminosidad del color (más bajo = más oscuro) <b data-o="val"></b><input type="range" data-k="val" min="5" max="100"></label></div>`:''}</section>`}
+$('#zonas').insertAdjacentHTML('beforeend',ZON.map(card).join(''));
+
+const zonaDe=sec=>sec.dataset.z=='G'?sel:sec.dataset.z;
+function pintar(sec){const z=zonaDe(sec),s=S[z];
+ sec.querySelector('[data-k=en]').checked=!!s.en;
+ sec.querySelector('[data-k=fx]').value=s.fx;
+ sec.querySelector('[data-k=br]').value=s.br;sec.querySelector('[data-o=br]').textContent=s.br+' %';
+ sec.querySelector('[data-k=sp]').value=s.sp;sec.querySelector('[data-o=sp]').textContent='ciclo '+(per(s.sp)/1000).toFixed(1)+' s';
+ const cv=sec.querySelector('.rueda');if(cv){const a=s.hsv||aHsv(s.col),p=Math.round(a[2]*100);marca(cv,a);sec.querySelector('[data-k=val]').value=p;sec.querySelector('[data-o=val]').textContent=p+' %'}
+ sec.querySelectorAll('[data-g]').forEach(b=>b.classList.toggle('on',b.dataset.g==sel))}
+function poner(z,k,v){S[z][k]=v;if(z=='G')['G1','G2','G3','G4','G5'].forEach(g=>S[g][k]=v)}
+function setCol(z,a){const c='#'+hsv(...a).map(n=>n.toString(16).padStart(2,'0')).join('');poner(z,'col',c);poner(z,'hsv',a);sendK('C'+z,`COL,${z},${rgb(c)}`)}
+function aplicar(sec,k,v){const z=zonaDe(sec);
+ if(k=='col')setCol(z,aHsv(v));
+ else if(k=='hsv')setCol(z,v);
+ else if(k=='val'){const a=S[z].hsv||aHsv(S[z].col);setCol(z,[a[0],a[1],v/100])}
+ else{v=+v;poner(z,k,v);
+  if(k=='en')send(`EN,${z},${v}`);
+  if(k=='fx')send(`FX,${z},${v}`);
+  if(k=='br')sendK('B'+z,`BR,${z},${v}`);
+  if(k=='sp')sendK('S'+z,`SP,${z},${per(v)}`);}
+ pintar(sec)}
+document.addEventListener('input',e=>{const el=e.target,k=el.dataset.k,sec=el.closest('.card');
+ if(!k||!sec||!sec.dataset.z)return;aplicar(sec,k,el.type=='checkbox'?+el.checked:el.value)});
+document.addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;const sec=b.closest('.card');
+ if(b.dataset.g){sel=b.dataset.g;pintar(sec)}
+ if(b.dataset.c)aplicar(sec,'col',b.dataset.c)});
+document.querySelectorAll('.card[data-z]').forEach(pintar);
+
+$('#dur').oninput=e=>{dur=+e.target.value;$('#durv').textContent=dur+' s';sendK('D','DUR,'+dur)};
+$('#durv').textContent=dur+' s';
+$('#sIni').onclick=()=>send('SEQ,1');
+$('#sRes').onclick=()=>send('SEQ,0');
+$('#pw').onclick=()=>{on=!on;send(on?'ON':'OFF');estadoPw()};
+function estadoPw(){$('#pw').classList.toggle('on',on);$('#pw').textContent=on?'Apagar todo':'Encender';$('#zonas').classList.toggle('off',!on)}
+estadoPw();
+
+function estado(c){$('#cn').classList.toggle('ok',c);$('#cn').textContent=c?'Conectado':'Conectar'}
+function aviso(t){const a=$('#av');a.textContent=t;a.style.display='block'}
+async function conectar(){
+ if(!navigator.bluetooth){aviso('Este navegador no permite Bluetooth desde páginas web. Abrilo con Chrome en Android.');return}
+ try{
+  log('Buscando PlantaC...');
+  const d=await navigator.bluetooth.requestDevice({filters:[{namePrefix:'Planta'}],optionalServices:[SVC]});
+  d.addEventListener('gattserverdisconnected',()=>{ch=null;estado(false);log('Se desconectó. Tocá Conectar para volver.')});
+  const sv=await d.gatt.connect(),s=await sv.getPrimaryService(SVC);
+  ch=await s.getCharacteristic(RXU);
+  const t=await s.getCharacteristic(TXU);
+  await t.startNotifications();
+  t.addEventListener('characteristicvaluechanged',e=>log('PlantaC: '+new TextDecoder().decode(e.target.value)));
+  estado(true);log('Conectado. Pasando la configuración del panel a la planta...');
+  sincronizar();
+ }catch(e){
+  log('No se pudo conectar: '+e.message);
+  if(/policy|permission|secure/i.test(e.message))aviso('El navegador bloqueó Bluetooth en esta página. Abrí el panel en una pestaña normal de Chrome (https) o alojá el archivo en tu propio sitio.');
+ }}
+$('#cn').onclick=conectar;
+</script></body></html>
